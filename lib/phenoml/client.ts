@@ -18,7 +18,7 @@ const sdk = new phenomlClient({
   clientId: requireEnv("PHENOML_CLIENT_ID"),
   clientSecret: requireEnv("PHENOML_CLIENT_SECRET"),
   baseUrl: requireEnv("PHENOML_API_BASE"),
-  timeoutInSeconds: 600,
+  timeoutInSeconds: 210,
 });
 
 function parseSummarySections(narrative: string): SummarySection[] {
