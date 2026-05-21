@@ -1,0 +1,94 @@
+/* File upload component: dropzone, file preview, and submit button. */
+
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  width: 100%;
+  max-width: 480px;
+}
+
+.dropzone {
+  width: 100%;
+  padding: var(--space-8) var(--space-6);
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface);
+  cursor: pointer;
+  text-align: center;
+  transition: border-color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.dropzone:hover,
+.dropzoneActive {
+  border-color: var(--color-accent);
+  background-color: var(--color-accent-soft);
+}
+
+.hiddenInput {
+  display: none;
+}
+
+.dropLabel {
+  font-size: var(--text-base);
+  color: var(--color-text-muted);
+}
+
+.fileInfo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.fileName {
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.fileSize {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.clearFile {
+  font-size: var(--text-sm);
+  color: var(--color-accent);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+}
+
+.clearFile:hover {
+  color: var(--color-accent-hover);
+}
+
+.error {
+  font-size: var(--text-sm);
+  color: var(--color-alert);
+}
+
+.submit {
+  padding: var(--space-3) var(--space-8);
+  background-color: var(--color-accent);
+  color: var(--color-surface);
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-base);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.submit:hover:not(:disabled) {
+  background-color: var(--color-accent-hover);
+}
+
+.submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

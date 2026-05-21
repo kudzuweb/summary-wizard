@@ -1,0 +1,7 @@
+/* TTL countdown: subtle timer text below the main content. */
+
+.countdown {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  text-align: center;
+}
