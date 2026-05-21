@@ -18,7 +18,7 @@ const sdk = new phenomlClient({
   clientId: requireEnv("PHENOML_CLIENT_ID"),
   clientSecret: requireEnv("PHENOML_CLIENT_SECRET"),
   baseUrl: requireEnv("PHENOML_API_BASE"),
-  timeoutInSeconds: 120,
+  timeoutInSeconds: 600,
 });
 
 function parseSummarySections(narrative: string): SummarySection[] {
@@ -60,6 +60,7 @@ export const phenoml: PhenoMLClient = {
     const response = await sdk.lang2Fhir.extractMultipleFhirResourcesFromADocument({
       version: "R4",
       content: base64,
+      detection_effort: "deep",
     });
 
     if (!response.bundle) {
