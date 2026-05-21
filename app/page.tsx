@@ -8,6 +8,7 @@ import { useSessionStore } from "@/lib/store/session";
 import { StateView } from "@/components/StateView";
 import { FileUpload } from "@/components/FileUpload";
 import { TtlCountdown } from "@/components/TtlCountdown";
+import { SummaryPanel } from "@/components/SummaryPanel";
 import type { Bundle } from "@/types/fhir";
 import styles from "./page.module.css";
 
@@ -85,10 +86,9 @@ export default function Home() {
         </header>
 
         <main className={styles.mainGrid}>
-          {/* PR 7: Summary panel */}
           <section className={styles.panel} data-region="summary">
             <h2 className={styles.panelTitle}>Summary</h2>
-            <p className={styles.placeholder}>Summary panel will render here.</p>
+            <SummaryPanel />
           </section>
 
           {/* PR 9/10: Timeline */}
