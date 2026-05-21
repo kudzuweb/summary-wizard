@@ -2,6 +2,7 @@
 
 export type {
   Bundle,
+  BundleEntry,
   Patient,
   Condition,
   MedicationRequest,
