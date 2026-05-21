@@ -86,6 +86,38 @@ Ensure `.debug-log.md` is gitignored so it never lands in a commit.
 
 ---
 
+## Acceptance Testing Protocol
+
+`npm run lint`, `npm run typecheck`, and `npm run test` are necessary but not
+sufficient. Many acceptance criteria require browser or integration verification
+that automated tests cannot cover. Follow these rules for every PR:
+
+### Test everything the criterion says, not a representative subset
+When a criterion lists multiple conditions (e.g. "missing file, wrong MIME,
+oversize"), test each one separately and record evidence for each. When a method
+has multiple code paths wired up, verify each path — not just the easiest one.
+A single passing example does not prove the others work.
+
+### Browser criteria require a running app
+Any criterion that says "renders," "survives reload," "visibly changes," or
+describes user interaction requires starting the dev server and verifying in
+the browser. Capture evidence: the curl output, the rendered HTML, the network
+request, or a description of the observed behavior. A passing `npm run test`
+does not satisfy a browser criterion.
+
+### Record evidence per criterion, not per PR
+The completion report must show evidence for each numbered criterion
+individually. "All tests pass" is valid evidence only for the criterion that
+says "tests pass" — not for criteria about visual rendering, API responses,
+or interaction behavior.
+
+### Test the full surface of what you built, not just what the plan asks
+If you wire up three API methods but the plan only asks you to test one, test
+all three. The plan's acceptance criteria are the minimum bar, not the scope
+of verification. Anything you wrote code for should be confirmed working.
+
+---
+
 ## Code Conventions
 
 The code-style conventions for this repo live in `code-conventions.md`. Read and
