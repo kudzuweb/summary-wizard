@@ -9,6 +9,7 @@ import { StateView } from "@/components/StateView";
 import { FileUpload } from "@/components/FileUpload";
 import { TtlCountdown } from "@/components/TtlCountdown";
 import { SummaryPanel } from "@/components/SummaryPanel";
+import { Timeline } from "@/components/Timeline";
 import type { Bundle } from "@/types/fhir";
 import styles from "./page.module.css";
 
@@ -91,10 +92,9 @@ export default function Home() {
             <SummaryPanel />
           </section>
 
-          {/* PR 9/10: Timeline */}
           <section className={styles.panel} data-region="timeline">
             <h2 className={styles.panelTitle}>Timeline</h2>
-            <p className={styles.placeholder}>Timeline will render here.</p>
+            <Timeline />
           </section>
 
           {/* PR 12: Chat */}
