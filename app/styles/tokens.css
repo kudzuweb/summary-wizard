@@ -1,0 +1,78 @@
+/* Design tokens: the single source of truth for all visual values.
+   Adjusting the app's appearance means editing this file only. */
+
+:root {
+  /* ---- Color: warm neutrals (the warmth comes from here) ---- */
+  --color-bg: #FAF8F4;
+  --color-surface: #FFFFFF;
+  --color-surface-2: #F4F1EB;
+  --color-text: #2A2A28;
+  --color-text-muted: #6B6862;
+  --color-border: #E7E2DA;
+
+  /* ---- Color: brand-derived accent (teal) ---- */
+  --color-accent: #2F8A8E;
+  --color-accent-hover: #267174;
+  --color-accent-soft: #DCEDEC;
+
+  /* ---- Color: clinical semantics (muted, never neon) ---- */
+  --color-stable: #6FA37A;
+  --color-stable-soft: #E6EEE3;
+  --color-watch: #C99632;
+  --color-watch-soft: #F4ECD8;
+  --color-alert: #D26B4F;
+  --color-alert-soft: #F6E2DA;
+
+  /* ---- Timeline lane colors (harmonized, distinguishable) ---- */
+  --lane-problems: #2F8A8E;
+  --lane-medications: #C77B4E;
+  --lane-procedures: #7A8C6B;
+  --lane-labs: #C99632;
+  --lane-immunizations: #5E9AA0;
+  --lane-visits: #ECE7DF;
+
+  /* ---- Typography ---- */
+  --font-display: "Fraunces", Georgia, serif;
+  --font-body: "Hanken Grotesk", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.75rem;
+  --text-3xl: 2.25rem;
+  --leading-tight: 1.2;
+  --leading-normal: 1.55;
+
+  /* ---- Spacing (4px base) ---- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* ---- Radius: rounded, not bubbly ---- */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
+
+  /* ---- Shadow: soft, layered, warm-tinted (preferred over borders) ---- */
+  --shadow-sm: 0 1px 2px rgba(42,42,40,.04), 0 1px 3px rgba(42,42,40,.06);
+  --shadow-md: 0 2px 8px rgba(42,42,40,.06), 0 10px 28px rgba(42,42,40,.05);
+
+  /* ---- Motion: gentle, used on meaningful moments only ---- */
+  --transition-fast: 120ms ease;
+  --transition: 200ms ease;
+  --ease-out: cubic-bezier(.2,.8,.2,1);
+
+  /* ---- z-index layers ---- */
+  --z-base: 0;
+  --z-timeline-hover: 10;
+  --z-popup: 100;
+  --z-modal: 1000;
+}
