@@ -1,7 +1,9 @@
-// Root layout: loads fonts, imports global styles, and sets the HTML shell.
+// Root layout: loads fonts, imports global styles, mounts the session
+// provider for IndexedDB hydration and TTL purge.
 
 import type { Metadata } from "next";
 import { Fraunces, Hanken_Grotesk, IBM_Plex_Mono } from "next/font/google";
+import { SessionProvider } from "@/components/SessionProvider";
 import "./globals.css";
 
 const fraunces = Fraunces({
@@ -39,7 +41,9 @@ export default function RootLayout({
       lang="en"
       className={`${fraunces.variable} ${hankenGrotesk.variable} ${ibmPlexMono.variable}`}
     >
-      <body>{children}</body>
+      <body>
+        <SessionProvider>{children}</SessionProvider>
+      </body>
     </html>
   );
 }
