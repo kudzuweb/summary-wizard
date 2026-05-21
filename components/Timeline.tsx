@@ -1,7 +1,7 @@
 // Alternating timeline: events branch above and below a horizontal axis,
-// positioned proportionally to time. The timeline scales wider when events
-// cluster, keeping a minimum gap so labels stay readable. Calendar-aware
-// year and month ticks orient the reader along the axis.
+// positioned proportionally to time. Related observations (vitals, lab
+// panels, assessments) are grouped into single events with structured
+// detail. Hovering or focusing highlights linked refs and dims unrelated.
 
 "use client";
 
@@ -26,7 +26,122 @@ const LANE_COLORS: Record<Lane, string> = {
 const PADDING = 40;
 const MIN_GAP = 60;
 
+type Reading = { label: string; value: unknown; unit: unknown; interpretation: unknown };
+type Section = { name: string; readings: Reading[] };
+
+function buildReading(event: TimelineEvent): Reading {
+  return {
+    label: event.label,
+    value: event.detail.value,
+    unit: event.detail.unit,
+    interpretation: event.detail.interpretation,
+  };
+}
+
+function buildLabGroup(members: TimelineEvent[]): TimelineEvent {
+  const byPanel = new Map<string, TimelineEvent[]>();
+  for (const m of members) {
+    const panel = (m.detail.panel as string) ?? "";
+    if (!byPanel.has(panel)) byPanel.set(panel, []);
+    byPanel.get(panel)!.push(m);
+  }
+
+  const panelNames = [...byPanel.keys()].sort();
+  const namedPanels = panelNames.filter((n) => n !== "");
+  const label = namedPanels.length > 0 ? `Labs: ${namedPanels.join(", ")}` : "Lab results";
+
+  const sections: Section[] = panelNames.map((name) => ({
+    name: name || "Other",
+    readings: byPanel
+      .get(name)!
+      .sort((a, b) => a.label.localeCompare(b.label))
+      .map(buildReading),
+  }));
+
+  const maxSalience = Math.max(...members.map((m) => m.salience));
+  const allRefs = [...new Set(members.flatMap((m) => m.refs))];
+  const memberIds = members.map((m) => m.id);
+
+  return {
+    id: memberIds.join("+"),
+    sourceType: "Observation",
+    lane: "Labs",
+    start: members[0].start,
+    end: null,
+    label,
+    code: members[0].code,
+    status: members[0].status,
+    detail: { sections, category: "laboratory", memberIds },
+    salience: maxSalience,
+    refs: allRefs,
+  };
+}
+
+function buildSimpleGroup(category: string, members: TimelineEvent[]): TimelineEvent {
+  const groupLabel =
+    category === "vital-signs"
+      ? "Vitals"
+      : category === "survey"
+        ? "Assessments"
+        : "Observations";
+
+  const readings: Reading[] = members.map(buildReading);
+  const maxSalience = Math.max(...members.map((m) => m.salience));
+  const allRefs = [...new Set(members.flatMap((m) => m.refs))];
+  const memberIds = members.map((m) => m.id);
+
+  return {
+    id: memberIds.join("+"),
+    sourceType: "Observation",
+    lane: "Labs",
+    start: members[0].start,
+    end: null,
+    label: groupLabel,
+    code: members[0].code,
+    status: members[0].status,
+    detail: { readings, category, memberIds },
+    salience: maxSalience,
+    refs: allRefs,
+  };
+}
+
+function groupEvents(events: TimelineEvent[]): TimelineEvent[] {
+  const result: TimelineEvent[] = [];
+  const byCategory = new Map<string, Map<number, TimelineEvent[]>>();
+
+  for (const event of events) {
+    const category = event.sourceType === "Observation" ? (event.detail.category as string | null) : null;
+    if (!category) {
+      result.push(event);
+      continue;
+    }
+
+    const ts = fuzzyToTimestamp(event.start);
+    if (!byCategory.has(category)) byCategory.set(category, new Map());
+    const byTime = byCategory.get(category)!;
+    if (!byTime.has(ts)) byTime.set(ts, []);
+    byTime.get(ts)!.push(event);
+  }
+
+  for (const [category, byTime] of byCategory) {
+    for (const [, members] of byTime) {
+      if (members.length === 1) {
+        result.push(members[0]);
+        continue;
+      }
+      if (category === "laboratory") {
+        result.push(buildLabGroup(members));
+      } else {
+        result.push(buildSimpleGroup(category, members));
+      }
+    }
+  }
+
+  return result.sort((a, b) => fuzzyToTimestamp(a.start) - fuzzyToTimestamp(b.start));
+}
+
 function eventLabel(event: TimelineEvent): string {
+  if (event.detail.readings || event.detail.sections) return event.label;
   switch (event.sourceType) {
     case "Condition":
       return `${event.label} diagnosis`;
@@ -38,7 +153,7 @@ function eventLabel(event: TimelineEvent): string {
   }
 }
 
-function eventDetail(event: TimelineEvent): string {
+function eventDetailText(event: TimelineEvent): string {
   const parts: string[] = [];
   if (event.status && event.status !== "unknown") parts.push(event.status);
   const d = event.detail;
@@ -54,6 +169,37 @@ function formatDate(iso: string, precision: string): string {
   if (precision === "month")
     return d.toLocaleDateString("en-US", { year: "numeric", month: "short", timeZone: "UTC" });
   return d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
+}
+
+function formatReading(r: Reading): string {
+  const parts: string[] = [];
+  if (r.value != null && r.unit) {
+    parts.push(`${r.label}: ${r.value} ${r.unit}`);
+  } else {
+    parts.push(r.label as string);
+  }
+  if (r.interpretation) parts.push(`(${r.interpretation})`);
+  return parts.join(" ");
+}
+
+function ariaLabel(event: TimelineEvent): string {
+  const parts = [eventLabel(event), formatDate(event.start.iso, event.start.precision)];
+  const sections = event.detail.sections as Section[] | undefined;
+  if (sections) {
+    for (const s of sections) {
+      parts.push(s.name);
+      for (const r of s.readings) parts.push(formatReading(r));
+    }
+  } else {
+    const readings = event.detail.readings as Reading[] | undefined;
+    if (readings) {
+      for (const r of readings) parts.push(formatReading(r));
+    } else {
+      const detail = eventDetailText(event);
+      if (detail) parts.push(detail);
+    }
+  }
+  return parts.join(", ");
 }
 
 type Tick = { time: number; label: string; minor: boolean };
@@ -141,6 +287,92 @@ function computeLayout(events: TimelineEvent[], containerWidth: number) {
   return { positions, totalWidth, timeRange, timeToX, ticks };
 }
 
+function connectedIds(eventId: string, events: TimelineEvent[]): Set<string> {
+  const ids = new Set<string>();
+  const source = events.find((e) => e.id === eventId);
+  if (!source) return ids;
+
+  for (const ref of source.refs) {
+    for (const e of events) {
+      const memberIds = e.detail.memberIds as string[] | undefined;
+      if (e.id === ref || memberIds?.includes(ref)) {
+        ids.add(e.id);
+        break;
+      }
+    }
+  }
+
+  return ids;
+}
+
+function applyEmphasis(timeline: HTMLElement, hoveredId: string, related: Set<string>) {
+  const eventEls = timeline.querySelectorAll<HTMLElement>(`.${styles.event}`);
+  for (const el of eventEls) {
+    const id = el.dataset.eventId ?? "";
+    if (id === hoveredId) {
+      el.dataset.emphasis = "hovered";
+    } else if (related.has(id)) {
+      el.dataset.emphasis = "related";
+    } else {
+      el.dataset.emphasis = "dimmed";
+    }
+  }
+}
+
+function clearEmphasis(timeline: HTMLElement) {
+  const eventEls = timeline.querySelectorAll<HTMLElement>(`.${styles.event}`);
+  for (const el of eventEls) {
+    delete el.dataset.emphasis;
+  }
+}
+
+function buildDetail(event: TimelineEvent): HTMLDivElement {
+  const detail = document.createElement("div");
+  detail.className = styles.detail;
+
+  const dateLine = document.createElement("div");
+  dateLine.textContent = formatDate(event.start.iso, event.start.precision);
+  detail.appendChild(dateLine);
+
+  const sections = event.detail.sections as Section[] | undefined;
+  if (sections) {
+    for (const section of sections) {
+      const showHeader = sections.length > 1 || section.name !== "Other";
+      if (showHeader) {
+        const header = document.createElement("div");
+        header.className = styles.detailSectionHeader;
+        header.textContent = section.name;
+        detail.appendChild(header);
+      }
+      for (const r of section.readings) {
+        const line = document.createElement("div");
+        line.textContent = formatReading(r);
+        detail.appendChild(line);
+      }
+    }
+    return detail;
+  }
+
+  const readings = event.detail.readings as Reading[] | undefined;
+  if (readings) {
+    for (const r of readings) {
+      const line = document.createElement("div");
+      line.textContent = formatReading(r);
+      detail.appendChild(line);
+    }
+    return detail;
+  }
+
+  const extra = eventDetailText(event);
+  if (extra) {
+    const line = document.createElement("div");
+    line.textContent = extra;
+    detail.appendChild(line);
+  }
+
+  return detail;
+}
+
 function render(container: HTMLDivElement, events: TimelineEvent[]) {
   container.replaceChildren();
 
@@ -173,6 +405,8 @@ function render(container: HTMLDivElement, events: TimelineEvent[]) {
   const timeline = document.createElement("div");
   timeline.className = styles.timeline;
   timeline.style.width = `${totalWidth}px`;
+  timeline.setAttribute("role", "list");
+  timeline.setAttribute("aria-label", "Medical record timeline");
 
   const axisLine = document.createElement("div");
   axisLine.className = styles.axisLine;
@@ -193,6 +427,15 @@ function render(container: HTMLDivElement, events: TimelineEvent[]) {
     timeline.appendChild(tickLabel);
   }
 
+  function onFocusIn(eventId: string) {
+    const related = connectedIds(eventId, events);
+    applyEmphasis(timeline, eventId, related);
+  }
+
+  function onFocusOut() {
+    clearEmphasis(timeline);
+  }
+
   for (let i = 0; i < events.length; i++) {
     const event = events[i];
     const position = i % 2 === 0 ? "above" : "below";
@@ -205,6 +448,15 @@ function render(container: HTMLDivElement, events: TimelineEvent[]) {
     el.style.left = `${positions[i]}px`;
     el.dataset.position = position;
     el.dataset.lane = event.lane;
+    el.dataset.eventId = event.id;
+    el.setAttribute("role", "listitem");
+    el.setAttribute("aria-label", ariaLabel(event));
+    el.setAttribute("tabindex", "0");
+
+    el.addEventListener("mouseenter", () => onFocusIn(event.id));
+    el.addEventListener("mouseleave", onFocusOut);
+    el.addEventListener("focus", () => onFocusIn(event.id));
+    el.addEventListener("blur", onFocusOut);
 
     const bar = document.createElement("div");
     bar.className = styles.bar;
@@ -221,16 +473,7 @@ function render(container: HTMLDivElement, events: TimelineEvent[]) {
     label.textContent = eventLabel(event);
     labelGroup.appendChild(label);
 
-    const detailParts: string[] = [formatDate(event.start.iso, event.start.precision)];
-    const extraDetail = eventDetail(event);
-    if (extraDetail) detailParts.push(extraDetail);
-
-    {
-      const detailEl = document.createElement("span");
-      detailEl.className = styles.detail;
-      detailEl.textContent = detailParts.join(" · ");
-      labelGroup.appendChild(detailEl);
-    }
+    labelGroup.appendChild(buildDetail(event));
 
     el.appendChild(labelGroup);
     timeline.appendChild(el);
@@ -245,9 +488,10 @@ export function Timeline() {
 
   const events = useMemo(() => {
     if (!bundle) return [];
-    return bundleToEvents(bundle)
+    const raw = bundleToEvents(bundle)
       .filter((e) => e.sourceType !== "Encounter")
       .sort((a, b) => fuzzyToTimestamp(a.start) - fuzzyToTimestamp(b.start));
+    return groupEvents(raw);
   }, [bundle]);
 
   useEffect(() => {

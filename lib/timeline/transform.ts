@@ -142,6 +142,38 @@ function mapEncounter(r: FhirResource): Pick<TimelineEvent, "start" | "end" | "l
   };
 }
 
+const VITAL_SIGN_LOINC = new Set([
+  "8302-2", "29463-7", "85354-9", "8480-6", "8462-4", "8310-5",
+  "8867-4", "9279-1", "2708-6", "59408-5", "39156-5", "3141-9",
+  "8478-0", "8287-5",
+]);
+
+const VITAL_SIGN_PATTERNS = [
+  "body weight", "body height", "blood pressure", "body temperature",
+  "heart rate", "respiratory rate", "oxygen saturation", "bmi",
+  "body mass index", "pulse oximetry", "systolic", "diastolic",
+];
+
+const SURVEY_PATTERNS = [
+  "phq", "gad", "questionnaire", "assessment score", "survey",
+  "edinburgh", "audit", "dast", "cage",
+];
+
+function inferObservationCategory(r: FhirResource): string | null {
+  const categories = r.category as { coding?: { code?: string }[] }[] | undefined;
+  const explicit = categories?.[0]?.coding?.[0]?.code;
+  if (explicit) return explicit;
+
+  const coding = (r.code as { coding?: Coding[] })?.coding?.[0];
+  if (coding?.code && VITAL_SIGN_LOINC.has(coding.code)) return "vital-signs";
+
+  const label = extractLabel(r).toLowerCase();
+  if (VITAL_SIGN_PATTERNS.some((p) => label.includes(p))) return "vital-signs";
+  if (SURVEY_PATTERNS.some((p) => label.includes(p))) return "survey";
+
+  return "laboratory";
+}
+
 function mapObservation(r: FhirResource): Pick<TimelineEvent, "start" | "end" | "lane" | "detail"> | null {
   const effectiveDt = r.effectiveDateTime as string | undefined;
   const start = parseFuzzyDate(effectiveDt);
@@ -151,6 +183,8 @@ function mapObservation(r: FhirResource): Pick<TimelineEvent, "start" | "end" | 
   const interpretation = r.interpretation as { coding?: { code?: string }[] }[] | undefined;
   const interpCode = interpretation?.[0]?.coding?.[0]?.code ?? null;
 
+  const category = inferObservationCategory(r);
+
   return {
     start,
     end: null,
@@ -159,6 +193,7 @@ function mapObservation(r: FhirResource): Pick<TimelineEvent, "start" | "end" | 
       value: valueQuantity?.value ?? null,
       unit: valueQuantity?.unit ?? null,
       interpretation: interpCode,
+      category,
     },
   };
 }
@@ -282,8 +317,24 @@ function walkReferences(entries: { fullUrl?: string; resource?: unknown }[], eve
   }
 }
 
+function buildPanelMap(entries: { fullUrl?: string; resource?: unknown }[]): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const entry of entries) {
+    const r = getResource(entry);
+    if (!r || resourceType(r) !== "DiagnosticReport") continue;
+    const name = extractLabel(r);
+    const results = r.result as { reference?: string }[] | undefined;
+    if (!results) continue;
+    for (const result of results) {
+      if (result.reference) map.set(result.reference, name);
+    }
+  }
+  return map;
+}
+
 export function bundleToEvents(bundle: Bundle): TimelineEvent[] {
   const entries = bundle.entry ?? [];
+  const panelMap = buildPanelMap(entries);
   const events: TimelineEvent[] = [];
 
   for (const entry of entries) {
@@ -296,6 +347,11 @@ export function bundleToEvents(bundle: Bundle): TimelineEvent[] {
 
     const mapped = mapper(r);
     if (!mapped) continue;
+
+    if (type === "Observation") {
+      const panelName = panelMap.get(entry.fullUrl ?? "") ?? panelMap.get(resourceId(entry));
+      if (panelName) mapped.detail.panel = panelName;
+    }
 
     events.push({
       id: resourceId(entry),

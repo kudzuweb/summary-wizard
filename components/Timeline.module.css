@@ -1,5 +1,6 @@
 /* Alternating timeline: events branch above and below a horizontal axis,
-   time-positioned with calendar tick marks. Hover expands label and detail. */
+   time-positioned with calendar tick marks. Hover/focus highlights linked
+   events and dims unrelated ones. */
 
 .container {
   width: 100%;
@@ -98,10 +99,12 @@
   transform: translateX(-50%);
   cursor: default;
   z-index: var(--z-base);
-  transition: z-index 0s;
+  transition: z-index 0s, opacity var(--transition);
+  outline: none;
 }
 
-.event:hover {
+.event:hover,
+.event:focus-visible {
   z-index: var(--z-timeline-hover);
 }
 
@@ -117,7 +120,8 @@
 .bar {
   width: 6px;
   border-radius: 3px 3px 0 0;
-  transition: height var(--transition), width var(--transition), opacity var(--transition);
+  transition: height var(--transition), width var(--transition),
+    opacity var(--transition), filter var(--transition);
   flex-shrink: 0;
 }
 
@@ -125,7 +129,8 @@
   border-radius: 0 0 3px 3px;
 }
 
-.event:hover .bar {
+.event:hover .bar,
+.event:focus-visible .bar {
   width: 10px;
   opacity: 1 !important;
   filter: brightness(1.1);
@@ -147,7 +152,8 @@
   padding-bottom: var(--space-1);
 }
 
-.event:hover .labelGroup {
+.event:hover .labelGroup,
+.event:focus-visible .labelGroup {
   max-width: 200px;
 }
 
@@ -163,7 +169,8 @@
     color var(--transition), max-width var(--transition);
 }
 
-.event:hover .label {
+.event:hover .label,
+.event:focus-visible .label {
   font-size: var(--text-sm);
   font-weight: 600;
   color: var(--color-text);
@@ -172,18 +179,10 @@
   overflow: visible;
 }
 
-.date {
-  font-size: 10px;
-  color: var(--color-text-muted);
-  opacity: 0.6;
-  transition: opacity var(--transition);
-}
-
-.event:hover .date {
-  opacity: 1;
-}
-
 .detail {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
   font-size: 10px;
   color: var(--color-text-muted);
   line-height: var(--leading-tight);
@@ -192,12 +191,39 @@
   opacity: 0;
   transition: max-height var(--transition), opacity var(--transition);
   white-space: normal;
-  max-width: 160px;
+  max-width: 180px;
 }
 
-.event:hover .detail {
-  max-height: 60px;
+.event:hover .detail,
+.event:focus-visible .detail {
+  max-height: 240px;
   opacity: 1;
+}
+
+/* Emphasis states set via data attributes during hover/focus interaction */
+.detailSectionHeader {
+  font-weight: 600;
+  color: var(--color-text);
+  margin-top: 4px;
+}
+
+.detailSectionHeader:first-of-type {
+  margin-top: 2px;
+}
+
+.event[data-emphasis="dimmed"] {
+  opacity: 0.25;
+}
+
+.event[data-emphasis="related"] .bar {
+  width: 10px;
+  opacity: 1 !important;
+  filter: brightness(1.2);
+}
+
+.event[data-emphasis="related"] .label {
+  color: var(--color-text);
+  font-weight: 600;
 }
 
 .empty {
