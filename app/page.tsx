@@ -10,6 +10,7 @@ import { FileUpload } from "@/components/FileUpload";
 import { TtlCountdown } from "@/components/TtlCountdown";
 import { SummaryPanel } from "@/components/SummaryPanel";
 import { Timeline } from "@/components/Timeline";
+import { ChatPanel } from "@/components/ChatPanel";
 import type { Bundle } from "@/types/fhir";
 import styles from "./page.module.css";
 
@@ -97,10 +98,9 @@ export default function Home() {
             <Timeline />
           </section>
 
-          {/* PR 12: Chat */}
           <section className={styles.panel} data-region="chat">
             <h2 className={styles.panelTitle}>Ask a question</h2>
-            <p className={styles.placeholder}>Chat panel will render here.</p>
+            <ChatPanel />
           </section>
         </main>
 
